@@ -1,7 +1,11 @@
 $('document').ready(function () {
   //load table data from backend
 
-  loadTableData('');
+  var currentDepartmentId = null;
+  var page = 1;
+  var page_limit = 3;
+  // Example department ID
+  // loadTableData(currentDepartmentId, null);
 
   //sidebar handler snippet
 
@@ -58,21 +62,85 @@ $('document').ready(function () {
 
   $(document).on('click', 'a[data-dept]', function (e) {
     e.preventDefault();
-    var departmentId = $(this).data('dept');
-    loadTableData(departmentId);
+    currentDepartmentId = $(this).data('dept');
+    page = 1;
+    departmentTableData(currentDepartmentId, page, page_limit);
   });
 
-  function loadTableData(departmentId) {
+  $(document).on('change', 'select[data-limit]', function (e) {
+    e.preventDefault();
+    page_limit = $(this).val();
+    if (currentDepartmentId !== null) {
+      departmentTableData(currentDepartmentId, page, page_limit);
+    } else {
+      loadTableData(page, page_limit);
+    }
+  });
+
+  // function loadTableData(departmentId) {
+  //   $.ajax({
+  //     url: '../db_operation/select.php',
+  //     type: 'GET',
+  //     data: { dept: departmentId },
+  //     success: function (data) {
+  //       $('tbody[data-table]').html(data);
+  //     },
+  //   });
+  // }
+  function loadTableData(page, page_limit) {
     $.ajax({
       url: '../db_operation/select.php',
       type: 'GET',
-      data: { dept: departmentId },
-      success: function (data) {
-        $('tbody[data-table]').html(data);
+      data: { pagination: page, limit: page_limit },
+      success: function (response) {
+        var data = JSON.parse(response);
+        $('tbody[data-table]').html(data.records);
+        $("div[data-pagination='pagination']").html(data.pagination_btn);
       },
     });
   }
-  loadTableData();
+
+  function departmentTableData(departmentId, page, page_limit) {
+    $.ajax({
+      url: '../db_operation/select.php',
+      type: 'GET',
+      data: { dept: departmentId, pagination: page, limit: page_limit },
+      success: function (response) {
+        var data = JSON.parse(response);
+        $('tbody[data-table]').html(data.records);
+        $("div[data-pagination='pagination']").html(data.pagination_btn);
+      },
+    });
+  }
+
+  // $(document).ready(function() {
+  // var currentDepartmentId = 1; // Example department ID
+  // loadTableData(currentDepartmentId, 1); // Load initial page
+
+  // Handle pagination link click event
+  $(document).on(
+    'click',
+    'div[data-pagination="pagination"] a[data-page]',
+    function (e) {
+      e.preventDefault();
+      page = $(this).data('page');
+      console.log(page);
+
+      if (currentDepartmentId !== null) {
+        departmentTableData(currentDepartmentId, page, page_limit);
+      } else {
+        loadTableData(page, page_limit);
+      }
+    }
+  );
+  // });
+  if (currentDepartmentId !== null) {
+    departmentTableData(currentDepartmentId, page, page_limit);
+  } else {
+    loadTableData(page, page_limit);
+  }
+  // loadTableData(currentDepartmentId, page, page_limit);
+
   $('#searchInput').on('keyup', function () {
     console.log('clicked');
     var searchTerm = $(this).val().toLowerCase();

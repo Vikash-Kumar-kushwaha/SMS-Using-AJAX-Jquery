@@ -1,19 +1,65 @@
 <?php
 session_start();
 
+$result = null;
+$limit = 3;
+if (isset($_GET['limit'])) {
+    $limit = $_GET['limit'];
+    // echo $_GET['limit'];
+}
+
+// $response = array();
+$totalRows = $initial_page = $totalPage = $page_number = $pagination_btn = null;
 
 $conn = mysqli_connect("localhost", "root", "", "studentinfo") or die("connection failed: " . mysqli_connect_error());
 $simpleQuery = "";
 $departmentId = isset($_GET['dept']) ? $_GET['dept'] : '';
 
 if (isset($_SESSION['id']) && $_SESSION['role'] === 'admin') {
+    $flag_option = 0;
     if (!empty($departmentId)) {
-        $simpleQuery = "SELECT * FROM student1,department where student1.dept_id='$departmentId' AND department.dept_id=student1.dept_id";
+        $simpleQuery1 = "SELECT * FROM student1,department where student1.dept_id='$departmentId' AND department.dept_id=student1.dept_id";
+        $resultNonPage = mysqli_query($conn, $simpleQuery1);
+        $totalRows = mysqli_num_rows($resultNonPage);
+        $flag_option = 1;
+        // $result = WebContent::executeQuery($simpleQuery);
     } else {
-        $simpleQuery = "SELECT * FROM student1, department WHERE student1.dept_id = department.dept_id";
+        $simpleQuery2 = "SELECT * FROM student1, department WHERE student1.dept_id = department.dept_id";
+        $resultNonPage = mysqli_query($conn, $simpleQuery2);
+        $totalRows = mysqli_num_rows($resultNonPage);
+
+        // $result = WebContent::executeQuery($simpleQuery);
     }
 
+    //pagination snnipet code start---------->
+    $totalPage = ceil($totalRows / $limit);
+
+    if (!isset($_GET['pagination'])) {
+        $page_number = 1;
+    } else {
+        $page_number = $_GET['pagination'];
+    }
+
+    $initial_page = ($page_number - 1) * $limit;
+
+    if ($flag_option === 1) {
+        $simpleQuery = "SELECT * FROM student1,department where student1.dept_id='$departmentId' AND department.dept_id=student1.dept_id LIMIT " . $initial_page . ',' . $limit;
+    } else if ($flag_option === 0) {
+        $simpleQuery = "SELECT * FROM student1,department where student1.dept_id=department.dept_id LIMIT " . $initial_page . ',' . $limit;
+    }
+
+    //     if (isset($_GET['dept'])) {
+//         $dept_get_id = $_GET['dept'];
+//         $simpleQuery = "SELECT * FROM student1,department where student1.dept_id='$dept_get_id' AND department.dept_id=student1.dept_id LIMIT " . $initial_page . ',' . $limit;
+//         $result = WebContent::executeQuery($simpleQuery);
+//     }else {
+//     $simpleQuery = "SELECT * FROM student1,department where student1.dept_id=department.dept_id LIMIT " . $initial_page . ',' . $limit;
+
+    //     $result = WebContent::executeQuery($simpleQuery);
+// }
+
     $result = mysqli_query($conn, $simpleQuery);
+
 
     // Generate HTML table rows
     $rows = '';
@@ -118,11 +164,35 @@ if (isset($_SESSION['id']) && $_SESSION['role'] === 'admin') {
     }
 }
 
+for ($page_number = 1; $page_number <= $totalPage; $page_number++) {
+    if (!empty($departmentId)) {
+        $pagination_btn .= "<a data-page=" . $page_number . " data-dept=" . $departmentId . " class='btn btn-sm btn-info mx-1'>$page_number</a>";
+    } else {
+        $pagination_btn .= "<a data-page=" . $page_number . " class='btn btn-sm btn-info mx-1'>$page_number</a>";
+
+    }
+}
+
 mysqli_close($conn);
 if ($rows !== '') {
-    echo $rows;
+    // Prepare response data
+    $response = array(
+        'status' => 'success',
+        'records' => $rows,
+        'pagination_btn' => $pagination_btn
+    );
+    echo json_encode($response);
+    // echo $rows;
 } else {
-    echo "<h2>no record found</h2>";
+    // echo "<h2>no record found</h2>";
+    $response = array(
+        'status' => 'error',
+        'records' => "<h2>no record found</h2>",
+        // 'pagination_btn' => $pagination_btn
+    );
+    echo json_encode($response);
 }
+
+
 
 ?>
